@@ -1,30 +1,18 @@
 name: video_translator
-description: A Flutter app to watch movies with real-time subtitle translation
+description: A basic Flutter app to play movies and translate subtitles.
 publish_to: 'none'
 
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '>=3.3.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  video_player: ^2.8.0
-  http: ^1.1.0
-  google_translate: ^0.0.5
-  provider: ^6.0.0
-  cached_network_image: ^3.3.0
-  flutter_dotenv: ^5.1.0
-  subtitle_wrapper_package: ^2.0.0
-  intl: ^0.19.0
-  path_provider: ^2.1.0
-  permission_handler: ^11.4.0
-
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  flutter_linter: ^3.0.0
+  http: ^1.3.0
+  provider: ^6.1.1
+  video_player: ^2.9.1
 
 flutter:
   uses-material-design: true

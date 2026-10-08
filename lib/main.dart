@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'screens/home_screen.dart';
-import 'screens/movie_player_screen.dart';
+
 import 'providers/translation_provider.dart';
 import 'providers/video_provider.dart';
+import 'screens/home_screen.dart';
+import 'screens/movie_player_screen.dart';
 
 void main() {
   runApp(const VideoTranslatorApp());
 }
 
 class VideoTranslatorApp extends StatelessWidget {
-  const VideoTranslatorApp({Key? key}) : super(key: key);
+  const VideoTranslatorApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -21,8 +22,9 @@ class VideoTranslatorApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'Video Translator',
+        debugShowCheckedModeBanner: false,
         theme: ThemeData(
-          primarySwatch: Colors.blue,
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
           useMaterial3: true,
         ),
         home: const HomeScreen(),

@@ -1,27 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/video_provider.dart';
+
 import '../providers/translation_provider.dart';
+import '../providers/video_provider.dart';
 import 'movie_player_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final List<Map<String, String>> _sampleVideos = [
+  final List<Map<String, String>> sampleVideos = const [
     {
-      'title': 'Sample Movie 1',
+      'title': 'Big Buck Bunny',
       'url': 'https://commondatastorage.googleapis.com/gtv-videos-library/sample/BigBuckBunny.mp4',
-      'poster': 'https://via.placeholder.com/300x400?text=Big+Buck+Bunny',
+      'poster': 'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=800&q=80',
     },
     {
-      'title': 'Sample Movie 2',
+      'title': 'Elephant Dream',
       'url': 'https://commondatastorage.googleapis.com/gtv-videos-library/sample/ElephantsDream.mp4',
-      'poster': 'https://via.placeholder.com/300x400?text=Elephant+Dream',
+      'poster': 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=800&q=80',
     },
   ];
 
@@ -29,180 +30,211 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Video Translator'),
-        elevation: 0,
+        title: const Text('Movie Translator'),
       ),
-      body: ListView(
-        children: [
-          // Language Selection
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Consumer<TranslationProvider>(
-              builder: (context, translationProvider, _) {
-                return Column(
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            _buildLanguageSelector(context),
+            const SizedBox(height: 20),
+            const Text(
+              'Movies',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 12),
+            ...sampleVideos.map((movie) => _buildMovieCard(context, movie)).toList(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLanguageSelector(BuildContext context) {
+    return Consumer<TranslationProvider>(
+      builder: (context, translationProvider, _) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 12,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Subtitle Language',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _LanguageDropdown(
+                      label: 'From',
+                      value: translationProvider.sourceLanguage,
+                      onChanged: (value) {
+                        if (value != null) {
+                          translationProvider.setSourceLanguage(value);
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _LanguageDropdown(
+                      label: 'To',
+                      value: translationProvider.targetLanguage,
+                      onChanged: (value) {
+                        if (value != null) {
+                          translationProvider.setTargetLanguage(value);
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMovieCard(BuildContext context, Map<String, String> movie) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () {
+          context.read<VideoProvider>().setVideo(
+            path: movie['url']!,
+            title: movie['title']!,
+            url: movie['url'],
+          );
+
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const MoviePlayerScreen()),
+          );
+        },
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                bottomLeft: Radius.circular(16),
+              ),
+              child: Image.network(
+                movie['poster']!,
+                width: 120,
+                height: 150,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  width: 120,
+                  height: 150,
+                  color: Colors.grey.shade200,
+                  child: const Icon(Icons.movie, size: 48),
+                ),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text(
+                      movie['title']!,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     const Text(
-                      'Subtitle Language',
+                      'Translated subtitles • Watch in your language',
                       style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: Colors.black54,
                       ),
                     ),
                     const SizedBox(height: 12),
                     Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('From:'),
-                              DropdownButton<String>(
-                                value: translationProvider.sourceLanguage,
-                                onChanged: (value) {
-                                  if (value != null) {
-                                    translationProvider.setSourceLanguage(value);
-                                  }
-                                },
-                                items: const [
-                                  DropdownMenuItem(value: 'en', child: Text('English')),
-                                  DropdownMenuItem(value: 'es', child: Text('Spanish')),
-                                  DropdownMenuItem(value: 'fr', child: Text('French')),
-                                  DropdownMenuItem(value: 'de', child: Text('German')),
-                                  DropdownMenuItem(value: 'it', child: Text('Italian')),
-                                  DropdownMenuItem(value: 'pt', child: Text('Portuguese')),
-                                  DropdownMenuItem(value: 'ja', child: Text('Japanese')),
-                                  DropdownMenuItem(value: 'zh-CN', child: Text('Chinese')),
-                                  DropdownMenuItem(value: 'ru', child: Text('Russian')),
-                                  DropdownMenuItem(value: 'ar', child: Text('Arabic')),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('To:'),
-                              DropdownButton<String>(
-                                value: translationProvider.targetLanguage,
-                                onChanged: (value) {
-                                  if (value != null) {
-                                    translationProvider.setTargetLanguage(value);
-                                  }
-                                },
-                                items: const [
-                                  DropdownMenuItem(value: 'en', child: Text('English')),
-                                  DropdownMenuItem(value: 'es', child: Text('Spanish')),
-                                  DropdownMenuItem(value: 'fr', child: Text('French')),
-                                  DropdownMenuItem(value: 'de', child: Text('German')),
-                                  DropdownMenuItem(value: 'it', child: Text('Italian')),
-                                  DropdownMenuItem(value: 'pt', child: Text('Portuguese')),
-                                  DropdownMenuItem(value: 'ja', child: Text('Japanese')),
-                                  DropdownMenuItem(value: 'zh-CN', child: Text('Chinese')),
-                                  DropdownMenuItem(value: 'ru', child: Text('Russian')),
-                                  DropdownMenuItem(value: 'ar', child: Text('Arabic')),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
+                      children: const [
+                        Icon(Icons.play_circle_fill, color: Colors.blue),
+                        SizedBox(width: 8),
+                        Text('Play now'),
                       ],
                     ),
                   ],
-                );
-              },
-            ),
-          ),
-          const Divider(),
-          // Sample Videos List
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: const Text(
-              'Available Movies',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-          ),
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _sampleVideos.length,
-            itemBuilder: (context, index) {
-              final video = _sampleVideos[index];
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                child: GestureDetector(
-                  onTap: () {
-                    context.read<VideoProvider>().setVideo(
-                          path: video['url']!,
-                          title: video['title']!,
-                          url: video['url'],
-                        );
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const MoviePlayerScreen(),
-                      ),
-                    );
-                  },
-                  child: Card(
-                    elevation: 4,
-                    child: Row(
-                      children: [
-                        Image.network(
-                          video['poster']!,
-                          width: 80,
-                          height: 120,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              width: 80,
-                              height: 120,
-                              color: Colors.grey[300],
-                              child: const Icon(Icons.movie),
-                            );
-                          },
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                video['title']!,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Tap to play with translations',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        const Icon(Icons.play_arrow, color: Colors.blue),
-                        const SizedBox(width: 12),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
+          ],
+        ),
       ),
+    );
+  }
+}
+
+class _LanguageDropdown extends StatelessWidget {
+  final String label;
+  final String value;
+  final ValueChanged<String?> onChanged;
+
+  const _LanguageDropdown({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const languages = {
+      'en': 'English',
+      'es': 'Spanish',
+      'fr': 'French',
+      'de': 'German',
+      'it': 'Italian',
+      'pt': 'Portuguese',
+      'ja': 'Japanese',
+      'zh-CN': 'Chinese',
+      'ru': 'Russian',
+      'ar': 'Arabic',
+    };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: value,
+          isExpanded: true,
+          decoration: InputDecoration(
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+          ),
+          items: languages.entries.map((entry) {
+            return DropdownMenuItem<String>(
+              value: entry.key,
+              child: Text(entry.value),
+            );
+          }).toList(),
+          onChanged: onChanged,
+        ),
+      ],
     );
   }
 }

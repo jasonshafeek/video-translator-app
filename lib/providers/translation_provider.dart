@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../services/translation_service.dart';
 
 class TranslationProvider extends ChangeNotifier {
@@ -7,7 +8,7 @@ class TranslationProvider extends ChangeNotifier {
   String _sourceLanguage = 'en';
   String _targetLanguage = 'es';
   bool _isTranslating = false;
-  Map<String, String> _translatedSubtitles = {};
+  final Map<String, String> _translatedSubtitles = {};
 
   String get sourceLanguage => _sourceLanguage;
   String get targetLanguage => _targetLanguage;
@@ -25,6 +26,10 @@ class TranslationProvider extends ChangeNotifier {
   }
 
   Future<String> translateText(String text) async {
+    if (text.trim().isEmpty) {
+      return text;
+    }
+
     _isTranslating = true;
     notifyListeners();
 
@@ -37,26 +42,21 @@ class TranslationProvider extends ChangeNotifier {
       _isTranslating = false;
       notifyListeners();
       return translated;
-    } catch (e) {
+    } catch (_) {
       _isTranslating = false;
       notifyListeners();
-      return text; // Return original if translation fails
+      return text;
     }
   }
 
   Future<void> translateSubtitles(List<String> subtitles) async {
     _isTranslating = true;
     notifyListeners();
-
     _translatedSubtitles.clear();
 
-    for (String subtitle in subtitles) {
-      try {
-        final translated = await translateText(subtitle);
-        _translatedSubtitles[subtitle] = translated;
-      } catch (e) {
-        _translatedSubtitles[subtitle] = subtitle;
-      }
+    for (final subtitle in subtitles) {
+      final translated = await translateText(subtitle);
+      _translatedSubtitles[subtitle] = translated;
     }
 
     _isTranslating = false;

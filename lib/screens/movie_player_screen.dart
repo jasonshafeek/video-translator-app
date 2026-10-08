@@ -1,38 +1,40 @@
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
 import 'package:provider/provider.dart';
-import '../providers/video_provider.dart';
+import 'package:video_player/video_player.dart';
+
 import '../providers/translation_provider.dart';
+import '../providers/video_provider.dart';
 import '../widgets/subtitle_widget.dart';
 
 class MoviePlayerScreen extends StatefulWidget {
-  const MoviePlayerScreen({Key? key}) : super(key: key);
+  const MoviePlayerScreen({super.key});
 
   @override
   State<MoviePlayerScreen> createState() => _MoviePlayerScreenState();
 }
 
 class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
-  late VideoPlayerController _videoController;
+  VideoPlayerController? _controller;
   bool _showControls = true;
-  String _currentSubtitle = '';
+  String _displaySubtitle = '';
+  Duration _lastPosition = Duration.zero;
 
   @override
   void initState() {
     super.initState();
-    final videoPath = context.read<VideoProvider>().videoPath;
-    
-    if (videoPath != null) {
-      _videoController = VideoPlayerController.networkUrl(Uri.parse(videoPath))
+    final videoUrl = context.read<VideoProvider>().videoPath;
+    if (videoUrl != null) {
+      _controller = VideoPlayerController.networkUrl(Uri.parse(videoUrl))
         ..initialize().then((_) {
-          setState(() {});
+          if (mounted) setState(() {});
+          _controller!.play();
         });
     }
   }
 
   @override
   void dispose() {
-    _videoController.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
@@ -41,113 +43,144 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
     final videoProvider = context.watch<VideoProvider>();
     final translationProvider = context.watch<TranslationProvider>();
 
+    if (videoProvider.videoPath == null) {
+      return const Scaffold(
+        body: Center(child: Text('No video selected')),
+      );
+    }
+
+    if (_controller == null || !_controller!.value.isInitialized) {
+      return Scaffold(
+        appBar: AppBar(title: Text(videoProvider.videoTitle ?? 'Movie')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final position = _controller!.value.position;
+    final subtitleText = _getSubtitleAtPosition(position, translationProvider);
+    if (subtitleText != _displaySubtitle && position != _lastPosition) {
+      _displaySubtitle = subtitleText;
+      _lastPosition = position;
+    }
+
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        title: Text(videoProvider.videoTitle ?? 'Video Player'),
+        title: Text(videoProvider.videoTitle ?? 'Movie'),
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
       ),
       body: Stack(
         children: [
-          // Video Player
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                _showControls = !_showControls;
-              });
-            },
-            child: Center(
-              child: _videoController.value.isInitialized
-                  ? AspectRatio(
-                      aspectRatio: _videoController.value.aspectRatio,
-                      child: Stack(
-                        children: [
-                          VideoPlayer(_videoController),
-                          // Subtitles Overlay
-                          if (_currentSubtitle.isNotEmpty)
-                            Positioned(
-                              bottom: 60,
-                              left: 0,
-                              right: 0,
-                              child: SubtitleWidget(
-                                subtitle: _currentSubtitle,
-                              ),
-                            ),
-                        ],
-                      ),
-                    )
-                  : const CircularProgressIndicator(),
+          Center(
+            child: AspectRatio(
+              aspectRatio: _controller!.value.aspectRatio,
+              child: VideoPlayer(_controller!),
             ),
           ),
-          // Video Controls
-          if (_showControls)
+          if (_displaySubtitle.isNotEmpty)
             Positioned(
-              bottom: 0,
+              bottom: 80,
               left: 0,
               right: 0,
-              child: _buildVideoControls(translationProvider),
+              child: Center(
+                child: SubtitleWidget(subtitle: _displaySubtitle),
+              ),
             ),
-          // Loading indicator during translation
-          if (translationProvider.isTranslating)
-            const Center(
-              child: CircularProgressIndicator(),
+          if (_showControls)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _buildControls(translationProvider),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildVideoControls(TranslationProvider translationProvider) {
+  String _getSubtitleAtPosition(
+    Duration position,
+    TranslationProvider translationProvider,
+  ) {
+    final subtitleMap = translationProvider.translatedSubtitles;
+    if (subtitleMap.isEmpty) {
+      return '';
+    }
+
+    final entries = subtitleMap.entries.toList();
+    for (final entry in entries) {
+      // This is a placeholder mapping and will be replaced by a real subtitle parser later.
+      if (entry.key.isNotEmpty) {
+        return entry.value;
+      }
+    }
+
+    return '';
+  }
+
+  Widget _buildControls(TranslationProvider translationProvider) {
     return Container(
-      color: Colors.black.withOpacity(0.3),
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.transparent, Colors.black.withOpacity(0.75)],
+        ),
+      ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          // Language info
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: Text(
-              'Translating: ${translationProvider.sourceLanguage.toUpperCase()} → ${translationProvider.targetLanguage.toUpperCase()}',
-              style: const TextStyle(color: Colors.white, fontSize: 12),
-            ),
-          ),
-          // Playback controls
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               IconButton(
-                icon: const Icon(Icons.skip_previous, color: Colors.white),
                 onPressed: () {
-                  _videoController.seekTo(
-                    _videoController.value.position - const Duration(seconds: 10),
-                  );
+                  final pos = _controller!.value.position - const Duration(seconds: 10);
+                  _controller!.seekTo(pos);
                 },
+                icon: const Icon(Icons.replay_10, color: Colors.white),
               ),
               IconButton(
+                onPressed: () {
+                  if (_controller!.value.isPlaying) {
+                    _controller!.pause();
+                  } else {
+                    _controller!.play();
+                  }
+                  setState(() {});
+                },
                 icon: Icon(
-                  _videoController.value.isPlaying ? Icons.pause : Icons.play_arrow,
+                  _controller!.value.isPlaying ? Icons.pause : Icons.play_arrow,
                   color: Colors.white,
+                  size: 34,
                 ),
-                onPressed: () {
-                  setState(() {
-                    _videoController.value.isPlaying
-                        ? _videoController.pause()
-                        : _videoController.play();
-                  });
-                },
               ),
               IconButton(
-                icon: const Icon(Icons.skip_next, color: Colors.white),
                 onPressed: () {
-                  _videoController.seekTo(
-                    _videoController.value.position + const Duration(seconds: 10),
-                  );
+                  final pos = _controller!.value.position + const Duration(seconds: 10);
+                  _controller!.seekTo(pos);
                 },
+                icon: const Icon(Icons.forward_10, color: Colors.white),
               ),
             ],
           ),
-          // Progress bar
-          VideoProgressIndicator(
-            _videoController,
-            allowScrubbing: true,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: VideoProgressIndicator(
+              _controller!,
+              allowScrubbing: true,
+              colors: const VideoProgressColors(
+                playedColor: Colors.blue,
+                bufferedColor: Colors.white24,
+                backgroundColor: Colors.white30,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Translating ${translationProvider.sourceLanguage.toUpperCase()} → ${translationProvider.targetLanguage.toUpperCase()}',
+            style: const TextStyle(color: Colors.white, fontSize: 12),
           ),
         ],
       ),
